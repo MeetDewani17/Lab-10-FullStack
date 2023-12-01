@@ -3,6 +3,7 @@ from flask import Blueprint, request
 from flask_restx import Resource, Api, fields # updated
 from src import db
 from src.api.models import User
+
 users_blueprint = Blueprint('users', __name__)
 api = Api(users_blueprint)
 # new
@@ -36,10 +37,42 @@ api.add_resource(UsersList, '/users')
 
 
 class Users(Resource):
- @api.marshal_with(user)
- def get(self, user_id):
-    user = User.query.filter_by(id=user_id).first()
-    if not user:
-        api.abort(404, f"User {user_id} does not exist")
-    return user, 200
+    @api.marshal_with(user)
+    def get(self, user_id):
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            api.abort(404, f"User {user_id} does not exist")
+        return user, 200
+    
+    @api.expect(user, validate=True)
+    def put(self, user_id):
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            api.abort(404, f"User {user_id} does not exist")
+
+        data=request.get_json()
+        email=data.get('email')
+        username=data.get('username')
+
+        if username:
+            user.username = username
+        if email:
+            user.email = email
+        db.session.commit()
+
+        return user, 200
+
+    def delete(self, user_id):
+        user = User.query.filter_by(id=user_id).first()
+        if not user:
+            api.abort(404, f"User {user_id} does not exist")
+
+        db.session.delete(user)
+        db.session.commit()
+
+        response_object = {'message': f'{user.email} was removed!'}
+        return response_object, 200
+    
 api.add_resource(Users, '/users/<int:user_id>')
+
+api.add_resource(UsersList, '/users')
